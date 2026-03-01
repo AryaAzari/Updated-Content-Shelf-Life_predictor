@@ -1,18 +1,17 @@
 """
 src/recommender.py — Promotion window recommender
 
-Combines two signals to classify each title into one of three states:
+Combines Cox survival model output to classify each title into one of three
+promotion states:
 
-  PROMOTE NOW   — survival probability still above threshold AND title has
-                  not yet reached its Prophet-detected inflection point.
-                  This is the active promotion window.
+  PROMOTE NOW   — survival probability is still above threshold and the title
+                  is past its first week. This is the active promotion window.
 
-  PROMOTE SOON  — title has not yet reached peak (very early post-release),
-                  with the window projected to open within 3 weeks based on
-                  the Cox-predicted median survival time.
+  PROMOTE SOON  — title is still in its first week post-release; the window
+                  is projected to open imminently.
 
-  WINDOW PASSED — post-inflection OR survival probability has dropped below
-                  the threshold. Promotion spend here has diminishing returns.
+  WINDOW PASSED — survival probability has dropped below the threshold.
+                  Promotion spend here has diminishing returns.
 
 The output is a formatted content calendar DataFrame that a platform
 scheduler can act on directly.
@@ -57,7 +56,6 @@ def _get_survival_prob_at_day(
 def classify_title(
     title: str,
     days_since_release: int,
-    inflection_day: Optional[int],
     survival_prob: float,
 ) -> str:
     """
@@ -66,17 +64,15 @@ def classify_title(
     Args:
         title: Title name (for logging only)
         days_since_release: How many days since the title was released
-        inflection_day: Prophet-detected inflection day (None if undetected)
         survival_prob: Cox-predicted survival probability at current day
 
     Returns:
         One of: "Promote Now", "Promote Soon", "Window Passed"
     """
-    post_inflection = (inflection_day is not None) and (days_since_release >= inflection_day)
     survival_below = survival_prob < SURVIVAL_PROMOTE_THRESHOLD
     pre_peak = days_since_release < 7  # still in first week — window not yet open
 
-    if post_inflection or survival_below:
+    if survival_below:
         return "Window Passed"
     if pre_peak:
         return "Promote Soon"
@@ -85,7 +81,6 @@ def classify_title(
 
 def build_content_calendar(
     survival_df: pd.DataFrame,
-    inflection_df: pd.DataFrame,
     cox_model,
     feature_columns: list[str],
     reference_date: str = "today",
@@ -99,7 +94,6 @@ def build_content_calendar(
 
     Args:
         survival_df: Survival dataset with covariates (from src/survival.py)
-        inflection_df: Inflection point results (from src/prophet_analysis.py)
         cox_model: Fitted lifelines CoxPHFitter
         feature_columns: List of one-hot + numeric feature column names
         reference_date: Date to treat as "today" for state classification.
@@ -107,9 +101,9 @@ def build_content_calendar(
 
     Returns:
         DataFrame with columns:
-            title, release_date, genre, peak_window_weeks,
-            current_survival_prob, inflection_day,
-            days_since_release, promotion_state, recommended_action
+            title, release_date, genre, predicted_peak_window,
+            current_survival_prob, days_since_release,
+            promotion_state, recommended_action
     """
     from datetime import date, datetime
 
@@ -118,10 +112,9 @@ def build_content_calendar(
     else:
         today = datetime.strptime(reference_date, "%Y-%m-%d").date()
 
-    merged = survival_df.merge(inflection_df[["title", "inflection_day", "peak_day"]], on="title", how="left")
     records = []
 
-    for _, row in merged.iterrows():
+    for _, row in survival_df.iterrows():
         try:
             release_dt = pd.to_datetime(row["release_date"]).date()
             days_since = (today - release_dt).days
@@ -139,7 +132,6 @@ def build_content_calendar(
         state = classify_title(
             title=row["title"],
             days_since_release=days_since,
-            inflection_day=row.get("inflection_day"),
             survival_prob=surv_prob,
         )
 
@@ -169,7 +161,6 @@ def build_content_calendar(
             "genre": row.get("genre", ""),
             "predicted_peak_window": peak_window_str,
             "current_survival_prob": round(surv_prob, 3) if not np.isnan(surv_prob) else None,
-            "inflection_day": row.get("inflection_day"),
             "days_since_release": days_since,
             "promotion_state": state,
             "recommended_action": action_map[state],

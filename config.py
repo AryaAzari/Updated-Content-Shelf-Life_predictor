@@ -14,7 +14,7 @@ WIKIMEDIA_USER_AGENT = os.environ.get(
 )
 
 # --- Database ---
-DB_PATH = os.path.join(os.path.dirname(__file__), "data", "shelflife.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "data", "shelflife_v2.db")
 
 # --- Trend death definition ---
 TREND_DEATH_THRESHOLD = 0.20           # 20% of peak rolling average

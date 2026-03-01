@@ -1,44 +1,38 @@
 """
-wiki_pageviews_rebuild.py
+wiki_pageviews_v2.py
 
-Completely rebuilds the pageviews table from scratch.
-Drops and recreates the table, then pulls fresh data for every
-movie currently in the movies table.
+Pulls Wikipedia pageview data for all movies in shelflife_v2.db.
+Range: 14 days before release → 210 days after release.
 
-Range: 14 days before release → 210 days after release
-Restrictions:
-    - American movies only (already enforced by movies table)
-    - Only inserts days with known pageview counts
-    - Tries alternate Wikipedia titles if primary fails
-    - Logs all movies that could not be found for manual follow-up
+Tries primary title first, then common Wikipedia alternates.
+Logs all not-found titles for manual follow-up.
+Closes database connection safely on completion.
 
 Author: [Your Name]
 """
-
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import sqlite3
 import requests
 import pandas as pd
 import time
 from datetime import datetime, timedelta
-from config import DB_PATH, WIKIMEDIA_USER_AGENT
 
+DB_PATH  = "/Users/arya/Desktop/Tubi-Proj/data/shelflife_v2.db"
 BASE_URL = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article"
-HEADERS  = {"User-Agent": WIKIMEDIA_USER_AGENT}
+HEADERS  = {
+    "User-Agent": "ShelfLifeProject/1.0 (your_email@example.com)"
+}
 
 # ── Database ──────────────────────────────────────────────────────────────────
 
-def rebuild_pageviews_table(conn):
-    """Drops and recreates the pageviews table cleanly."""
+def create_pageviews_table(conn):
     conn.execute("DROP TABLE IF EXISTS pageviews")
     conn.execute("""
         CREATE TABLE pageviews (
             id                  INTEGER PRIMARY KEY AUTOINCREMENT,
             movie_id            INTEGER NOT NULL,
             title               TEXT NOT NULL,
+            wiki_title          TEXT NOT NULL,
             date                DATE NOT NULL,
             pageviews           INTEGER NOT NULL,
             days_from_release   INTEGER NOT NULL,
@@ -46,8 +40,19 @@ def rebuild_pageviews_table(conn):
             UNIQUE(movie_id, date)
         )
     """)
+
+    # log movies that could not be found for manual follow-up
+    conn.execute("DROP TABLE IF EXISTS pageview_failures")
+    conn.execute("""
+        CREATE TABLE pageview_failures (
+            movie_id     INTEGER PRIMARY KEY,
+            title        TEXT,
+            release_date TEXT,
+            reason       TEXT
+        )
+    """)
     conn.commit()
-    print("✓ Pageviews table rebuilt\n")
+    print("✓ Pageviews table created\n")
 
 # ── Wikipedia Helpers ─────────────────────────────────────────────────────────
 
@@ -55,19 +60,18 @@ def format_wiki_title(title: str) -> str:
     return title.strip().replace(" ", "_")
 
 
-def fetch_pageviews(title: str, start_date: datetime,
+def fetch_pageviews(wiki_title: str, start_date: datetime,
                     end_date: datetime) -> list:
     """
     Fetches daily pageview counts from Wikimedia API.
     Returns list of (date_str, views) tuples.
-    Returns empty list if article not found or request fails.
+    Returns empty list if article not found.
     """
-    wiki_title = format_wiki_title(title)
-    start_str  = start_date.strftime("%Y%m%d")
-    end_str    = end_date.strftime("%Y%m%d")
-    url        = (
+    url = (
         f"{BASE_URL}/en.wikipedia/all-access/all-agents"
-        f"/{wiki_title}/daily/{start_str}/{end_str}"
+        f"/{format_wiki_title(wiki_title)}/daily"
+        f"/{start_date.strftime('%Y%m%d')}"
+        f"/{end_date.strftime('%Y%m%d')}"
     )
 
     try:
@@ -84,16 +88,18 @@ def fetch_pageviews(title: str, start_date: datetime,
         return []
 
 
-def try_alternate_titles(title: str, year: int, start_date: datetime,
-                         end_date: datetime) -> tuple[list, str]:
+def try_alternate_titles(title: str, year: int,
+                         start_date: datetime,
+                         end_date: datetime) -> tuple:
     """
     Tries common Wikipedia title variations if primary title 404s.
-    Returns (results, successful_title) or ([], None) if all fail.
+    Returns (results, successful_wiki_title) or ([], None).
     """
     alternates = [
         f"{title} (film)",
         f"{title} ({year} film)",
         f"{title} (film series)",
+        f"The {title}",
     ]
 
     for alt in alternates:
@@ -105,16 +111,17 @@ def try_alternate_titles(title: str, year: int, start_date: datetime,
 
     return [], None
 
-# ── Core Extraction ───────────────────────────────────────────────────────────
+# ── Core Pull ─────────────────────────────────────────────────────────────────
 
-def pull_movie_pageviews(movie_id: int, title: str,
-                         release_date: datetime) -> tuple[list, bool]:
+def pull_movie(movie_id: int, title: str,
+               release_date: datetime) -> tuple:
     """
-    Pulls pageview data for a single movie across its full window.
+    Pulls full pageview window for a single movie.
+    Window: 14 days before release → 210 days after release.
     Caps end date at today for recent releases.
 
     Returns:
-        (rows ready for DB insertion, success bool)
+        (rows, wiki_title_used, success_bool)
     """
     start_date = release_date - timedelta(days=14)
     end_date   = min(
@@ -125,19 +132,20 @@ def pull_movie_pageviews(movie_id: int, title: str,
     print(f"\n[{title}]")
     print(f"  Window: {start_date.date()} → {end_date.date()}")
 
-    # primary title attempt
-    results      = fetch_pageviews(title, start_date, end_date)
-    used_title   = title
+    # primary attempt
+    results    = fetch_pageviews(title, start_date, end_date)
+    wiki_title = title
 
-    # fallback to alternate titles
+    # fallback to alternates
     if not results:
-        year = release_date.year
         print(f"  ⚠ Not found — trying alternates...")
-        results, used_title = try_alternate_titles(title, year, start_date, end_date)
+        results, wiki_title = try_alternate_titles(
+            title, release_date.year, start_date, end_date
+        )
 
     if not results:
-        print(f"  ✗ Could not find Wikipedia article — add to manual list")
-        return [], False
+        print(f"  ✗ Could not find Wikipedia article")
+        return [], None, False
 
     rows = []
     for date_str, views in results:
@@ -145,22 +153,24 @@ def pull_movie_pageviews(movie_id: int, title: str,
         days_from_release = (date - release_date).days
         rows.append((
             movie_id,
-            used_title,
+            title,
+            wiki_title,
             date.strftime("%Y-%m-%d"),
             views,
             days_from_release,
         ))
 
-    print(f"  ✓ {len(rows)} days pulled via '{used_title}'")
-    return rows, True
+    print(f"  ✓ {len(rows)} days pulled via '{wiki_title}'")
+    return rows, wiki_title, True
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print("Rebuilding pageviews table from scratch...\n", flush=True)
+    print("Starting Wikipedia pageview collection for shelflife_v2.db\n",
+          flush=True)
 
     with sqlite3.connect(DB_PATH) as conn:
-        rebuild_pageviews_table(conn)
+        create_pageviews_table(conn)
 
         movies = pd.read_sql_query("""
             SELECT movie_id, title, release_date
@@ -178,32 +188,49 @@ def main():
             title        = row["title"]
             release_date = datetime.strptime(row["release_date"], "%Y-%m-%d")
 
-            rows, success = pull_movie_pageviews(movie_id, title, release_date)
+            rows, wiki_title, success = pull_movie(
+                movie_id, title, release_date
+            )
 
             if not success:
                 not_found.append((movie_id, title))
+                conn.execute("""
+                    INSERT OR IGNORE INTO pageview_failures
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    movie_id,
+                    title,
+                    row["release_date"],
+                    "wikipedia_article_not_found",
+                ))
+                conn.commit()
                 continue
 
             conn.executemany("""
                 INSERT OR IGNORE INTO pageviews
-                (movie_id, title, date, pageviews, days_from_release)
-                VALUES (?, ?, ?, ?, ?)
+                (movie_id, title, wiki_title, date,
+                 pageviews, days_from_release)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, rows)
             conn.commit()
-            total_inserted += len(rows)
 
+            total_inserted += len(rows)
             time.sleep(0.5)
 
         # ── Summary ───────────────────────────────────────────────────────────
         print(f"\n{'='*50}")
         print(f"✓ Done. {total_inserted} total rows inserted.")
-        print(f"  {len(movies) - len(not_found)}/{len(movies)} movies successfully pulled.")
+        print(f"  {len(movies) - len(not_found)}/{len(movies)} movies pulled successfully.")
 
         if not_found:
-            print(f"\n⚠ Could not find Wikipedia data for {len(not_found)} movies:")
-            print(f"  Use newscrip.py with the correct Wikipedia title for each:\n")
+            print(f"\n⚠ Could not find Wikipedia data for "
+                  f"{len(not_found)} movies:")
+            print(f"  Use newscrip.py with the correct Wikipedia "
+                  f"title for each:\n")
             for mid, t in not_found:
                 print(f"  movie_id={mid} | {t}")
+            print(f"\n  These are also logged in the "
+                  f"pageview_failures table.")
 
 
 if __name__ == "__main__":
