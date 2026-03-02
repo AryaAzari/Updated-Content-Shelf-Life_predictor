@@ -1,26 +1,27 @@
 """
-wiki_pageviews_v2.py
+collect_pageviews.py — Wikipedia pageview collection
 
-Pulls Wikipedia pageview data for all movies in shelflife_v2.db.
+Pulls daily Wikipedia pageview data for all movies in the database.
 Range: 14 days before release → 210 days after release.
 
 Tries primary title first, then common Wikipedia alternates.
 Logs all not-found titles for manual follow-up.
-Closes database connection safely on completion.
-
-Author: [Your Name]
 """
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import sqlite3
 import requests
 import pandas as pd
 import time
 from datetime import datetime, timedelta
+from config import DB_PATH, WIKIMEDIA_USER_AGENT
 
-DB_PATH  = "/Users/arya/Desktop/Tubi-Proj/data/shelflife_v2.db"
 BASE_URL = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article"
 HEADERS  = {
-    "User-Agent": "ShelfLifeProject/1.0 (your_email@example.com)"
+    "User-Agent": WIKIMEDIA_USER_AGENT
 }
 
 # ── Database ──────────────────────────────────────────────────────────────────

@@ -1,28 +1,24 @@
 """
-collect_movies_v2.py
+collect_movies.py — TMDB movie metadata collection
 
-Improved data collection addressing known biases from v1:
-- Randomized sampling within popularity bands (reduces popularity bias)
-- Budget verified against multiple TMDB fields
-- Strict primary genre enforcement
-- Enforced per-year quotas
-- Minimum and maximum popularity bounds to avoid extreme outliers
-
-Author: [Your Name]
+Collects American movies across 5 genres and 3 budget tiers with
+randomized sampling within popularity bands to reduce selection bias.
+Budget thresholds are calibrated per genre from the data itself.
 """
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import requests
 import sqlite3
 import time
-import os
 import random
 import numpy as np
-from dotenv import load_dotenv
+from config import DB_PATH, TMDB_API_KEY
 
-load_dotenv()
-API_KEY  = os.getenv("TMDB_API_KEY")
+API_KEY  = TMDB_API_KEY
 BASE_URL = "https://api.themoviedb.org/3"
-DB_PATH  = "/Users/arya/Desktop/Tubi-Proj/data/shelflife_v2.db"
 
 VALID_YEARS = [2018, 2019, 2023, 2024]
 

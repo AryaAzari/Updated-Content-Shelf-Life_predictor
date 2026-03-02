@@ -27,14 +27,12 @@ SENSITIVITY_THRESHOLDS = [0.15, 0.20, 0.25]
 
 # --- Cox model ---
 # Features used in Cox Proportional Hazards model
-# (genre and release_season are one-hot encoded at fit time;
-#  budget_usd is log-transformed to log_budget before fitting)
+# (genre, budget_tier, and release_season are one-hot encoded at fit time)
 COX_COVARIATES = [
-    "budget_usd",
     "runtime",
     "early_velocity",
     "is_franchise",
-    # one-hot columns for genre and release_season are added dynamically
+    # one-hot columns for genre, budget_tier, and release_season are added dynamically
 ]
 
 # --- Promotion recommender ---

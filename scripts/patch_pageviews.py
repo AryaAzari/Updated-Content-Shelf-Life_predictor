@@ -1,13 +1,11 @@
 """
-patch_pageviews.py
+patch_pageviews.py — Manual single-movie pageview patch
 
 One-off helper to manually fetch and insert pageview data for a single
 movie that was missed or failed during the main collection run.
 
 Edit the three variables at the top, then run:
     python scripts/patch_pageviews.py
-
-Author: [Your Name]
 """
 
 import sys
