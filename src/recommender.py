@@ -19,7 +19,6 @@ scheduler can act on directly.
 
 import pandas as pd
 import numpy as np
-from typing import Optional
 from config import SURVIVAL_PROMOTE_THRESHOLD, PROMOTE_SOON_WINDOW_WEEKS
 
 
