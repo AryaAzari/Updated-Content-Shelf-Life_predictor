@@ -19,10 +19,9 @@ The core analytical insight is that different content types have fundamentally d
 ### Viewing notebook results (Strongly Recommend)
 
 The notebook results visible in `analysis.ipynb` in the GitHub repository capture the entirety of my analysis, design choices, and significant/insignificant findings.
-Simply viewing the notebook is my recommended path to access the project as it requires no downloads/dependencies
-and running the notebook yourself will yield the exact same results as data is precollected using the featured scripts.
+Simply viewing the notebook is my recommended path to access the project as it includes explanations of statistical methods and requires no downloads/dependencies. Furthermore, running the notebook yourself will yield the same results as data is precollected using the featured scripts and stored in our SQLite database.
 
-### Running the Notebook (If insisted)
+### Running the Notebook (Not really recommended)
 
 The pre-collected data is stored in `data/shelflife_v2.db` (SQLite). The database is in the GitHub repository, so you only need to install dependencies and run the notebook — no API keys or data collection required.
 
@@ -36,7 +35,7 @@ pip install -r requirements.txt
 jupyter notebook analysis.ipynb
 ```
 
-### Full Reproduction (Not recommended as data collection requires selective use of the `patch_pageviews.py` script and will likely lead to a rougher experience)
+### Full Reproduction (Not recommended as data collection requires selective use of the `patch_pageviews.py` script and a TMDB API key (will likely lead to a rougher experience))
 
 To re-collect data from scratch, you'll need API credentials:
 
@@ -78,8 +77,7 @@ Tubi-Proj/
 │   └── patch_pageviews.py        # One-off helper to manually patch a single movie
 │
 ├── src/
-│   ├── survival.py               # Trend death logic, survival dataset construction
-│   └── recommender.py            # 3-state promotion window classifier
+│   └── survival.py               # Trend death logic, survival dataset construction
 │
 └── analysis.ipynb                # Main analysis notebook — start here
 ```
@@ -139,8 +137,8 @@ One-off helper for movies that failed during the main collection run. Edit the t
 
 ## Key Findings
 
-- **Drama is the standout genre.** Drama titles have roughly half the weekly hazard rate of action titles (Cox HR = 0.537, p = 0.032) — the only covariate reaching statistical significance. Pairwise log-rank tests confirm drama's shelf life is significantly longer than action (p = 0.004), comedy (p = 0.021), and horror (p = 0.010).
-- **The typical promotion window is 5–7 weeks, not days.** Median survival across all genres is 6 weeks. Scheduling teams have a meaningful window to act — the risk is failing to align promotion spend to genre-specific decay curves.
+- **Drama is the standout genre.** Drama titles have roughly half the weekly hazard rate of action titles (Cox HR = 0.537, p = 0.032), which is the only feature that reaches statistical significance. Pairwise log-rank tests confirm drama's shelf life is significantly longer than action (p = 0.004), comedy (p = 0.021), and horror (p = 0.010).
+- **The typical promotion window is 5–7 weeks** Median survival across all genres is 6 weeks. Scheduling teams have a meaningful window to act — the risk is failing to align promotion spend to genre-specific decay curves.
 - **First-week buzz does not predict long-term shelf life.** Despite intuitive appeal, `early_velocity` has a near-null hazard ratio (HR ≈ 1.000), meaning launch interest and sustained engagement are driven by different dynamics.
 - **Budget, runtime, and most release seasons show no significant effect** on trend duration at this sample size (all p > 0.05).
-- **Concordance index = 0.635** — the Cox model is modestly better than chance for ranking titles by shelf life but not a strong individual predictor. It is directionally informative for genre-level editorial planning.
+- **Concordance index = 0.635** the Cox model with our sample size is modestly better than chance for ranking titles by shelf life but not a strong individual predictor. It is directionally informative for genre-level promotion planning.
