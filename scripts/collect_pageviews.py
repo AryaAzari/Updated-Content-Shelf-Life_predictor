@@ -6,6 +6,8 @@ Range: 14 days before release → 210 days after release.
 
 Tries primary title first, then common Wikipedia alternates.
 Logs all not-found titles for manual follow-up.
+
+Written by Arya Azari with help from Claude Sonnet 4.6
 """
 
 import sys

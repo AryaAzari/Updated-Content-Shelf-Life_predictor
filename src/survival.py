@@ -13,6 +13,8 @@ never decayed.
 
 The output is a survival dataset with one row per title, ready for
 Kaplan-Meier and Cox model fitting.
+
+Written by Arya Azari with help from Claude Sonnet 4.6 for complex computations.
 """
 
 import numpy as np
@@ -27,16 +29,14 @@ from config import (
 )
 
 
-# ---------------------------------------------------------------------------
-# Core computation
-# ---------------------------------------------------------------------------
+# Computing rolling averages per title
 
 def compute_rolling_avg(pageviews_df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute a 7-day rolling average of pageviews for each title.
 
     Args:
-        pageviews_df: Long-format dataframe with [title, days_since_release, pageviews]
+        pageviews_df: Dataframe with [title, days_since_release, pageviews]
 
     Returns:
         Same dataframe with an additional `rolling_avg` column.
@@ -49,6 +49,8 @@ def compute_rolling_avg(pageviews_df: pd.DataFrame) -> pd.DataFrame:
     )
     return df
 
+
+# Compute weekly averages per title as daily data is too noisy
 
 def compute_weekly_avg(pageviews_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -113,6 +115,8 @@ def find_trend_death_week(
     return None
 
 
+# Building survival dataset based on our definition of trend death
+# Very complex and requires a lot of computation, so work was delegated to Claude
 def build_survival_dataset(
     pageviews_df: pd.DataFrame,
     titles_df: pd.DataFrame,

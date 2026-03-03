@@ -2,23 +2,29 @@
 
 > How long does a title stay trending — and when is the optimal moment to promote it?
 
-This project models content trend shelf life using Wikipedia daily pageviews as a public intent signal, applies survival analysis to quantify decay rates by genre, and outputs a data-driven promotion window recommender for platform schedulers.
+This project models content trend shelf life using Wikipedia daily pageviews as a public content demand signal, applies survival analysis to quantify decay rates by genre, and outputs data-driven promotion window recommendations for platform schedulers.
 
 ---
 
-## Project Framing
+## Project Summary
 
-Wikipedia pageview counts are a high-fidelity proxy for content demand: they capture **intent-driven search behavior** (people actively looking up a film) and are freely available for any title on any platform. Unlike internal play counts, they're reproducible by anyone with internet access, which makes them ideal for an analytical prototype.
+Wikipedia pageview counts are a public proxy for content demand: they capture **intent-driven search behavior** (people actively looking up a film) and are freely available for any title on any platform. Unlike internal play counts, they're reproducible by anyone with internet access, which makes them ideal for an analytical prototype.
 
-The core analytical insight is that different content types have **fundamentally different shelf-life distributions**, not just different average durations. Genre-specific promotion timelines aren't just nice-to-have — they're necessary to avoid wasting budget on content that's already past its peak, or missing the window for content that builds slowly.
+The core analytical insight is that different content types have fundamentally different shelf-life distributions, not just different average durations. This project serves to suggest that Genre-specific promotion timelines are necessary to avoid wasting budget on content that's already past its peak, or missing the window for content that slowly gains traction.
 
 ---
 
 ## Quick Start
 
-### Running the Notebook (Recommended for Reviewers)
+### Viewing notebook results (Strongly Recommend)
 
-The pre-collected data is stored in `data/shelflife_v2.db` (SQLite). If you already have the database, you only need to install dependencies and run the notebook — no API keys or data collection required.
+The notebook results visible in `analysis.ipynb` in the GitHub repository capture the entirety of my analysis, design choices, and significant/insignificant findings.
+Simply viewing the notebook is my recommended path to access the project as it requires no downloads/dependencies
+and running the notebook yourself will yield the exact same results as data is precollected using the featured scripts.
+
+### Running the Notebook (If insisted)
+
+The pre-collected data is stored in `data/shelflife_v2.db` (SQLite). The database is in the GitHub repository, so you only need to install dependencies and run the notebook — no API keys or data collection required.
 
 ```bash
 # 1. Clone the repo and set up the environment
@@ -30,7 +36,7 @@ pip install -r requirements.txt
 jupyter notebook analysis.ipynb
 ```
 
-### Full Reproduction (Data Collection + Analysis)
+### Full Reproduction (Not recommended as data collection requires selective use of the `patch_pageviews.py` script and will likely lead to a rougher experience)
 
 To re-collect data from scratch, you'll need API credentials:
 
@@ -115,11 +121,10 @@ One-off helper for movies that failed during the main collection run. Edit the t
 | Threshold sensitivity | KM curves at 15%, 20%, 25% | `lifelines` |
 | Shelf life by genre | Kaplan-Meier survival curves + pairwise log-rank tests | `lifelines` |
 | Covariate effects | Cox Proportional Hazards with Schoenfeld residual check | `lifelines` |
-| Promotion state | 3-state classifier (Promote Now / Promote Soon / Window Passed) | custom |
 
 ---
 
-## Model Features
+## Cox Proportional Hazards Model Features
 
 | Feature | Source | Description |
 |---|---|---|

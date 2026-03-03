@@ -4,6 +4,8 @@ collect_movies.py — TMDB movie metadata collection
 Collects American movies across 5 genres and 3 budget tiers with
 randomized sampling within popularity bands to reduce selection bias.
 Budget thresholds are calibrated per genre from the data itself.
+
+Written by Arya Azari with help from Claude Sonnet 4.6
 """
 
 import sys
@@ -156,7 +158,7 @@ def get_primary_genre(details: dict) -> str | None:
         return None
     return GENRE_ID_TO_NAME.get(genres[0]["id"], None)
 
-# ── Calibration ───────────────────────────────────────────────────────────────
+# ── Calibration of budget thresholds per genre ─────────────────────────────────
 
 def calibrate_genre(genre_name: str, genre_id: int,
                     global_seen: set) -> dict:

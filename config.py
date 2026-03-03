@@ -10,7 +10,7 @@ load_dotenv()
 # --- API credentials (set in .env) ---
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
 WIKIMEDIA_USER_AGENT = os.environ.get(
-    "WIKIMEDIA_USER_AGENT", "ShelfLifeProject/1.0 (your@email.com)"
+    "WIKIMEDIA_USER_AGENT", "ShelfLifeProject/1.0 (arya.azari04@gmail.com)"
 )
 
 # --- Database ---

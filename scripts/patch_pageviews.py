@@ -6,6 +6,8 @@ movie that was missed or failed during the main collection run.
 
 Edit the three variables at the top, then run:
     python scripts/patch_pageviews.py
+
+Written by Arya Azari with help from Claude Sonnet 4.6
 """
 
 import sys
