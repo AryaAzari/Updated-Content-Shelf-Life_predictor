@@ -18,7 +18,7 @@ The core analytical insight is that different content types have fundamentally d
 
 ### Viewing notebook results (Strongly Recommend)
 
-The notebook results visible in `analysis.ipynb` in the GitHub repository capture the entirety of my analysis, design choices, and significant/insignificant findings.
+The notebook results are visible in `analysis.ipynb` in the GitHub repository capture the entirety of my analysis, design choices, and significant/insignificant findings.
 Simply viewing the notebook is my recommended path to access the project as it includes explanations of statistical methods and requires no downloads/dependencies. Furthermore, running the notebook yourself will yield the same results as data is precollected using the featured scripts and stored in our SQLite database.
 
 ### Running the Notebook (Not really recommended)
