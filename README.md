@@ -111,7 +111,6 @@ One-off helper for movies that failed during the main collection run. Edit the t
 
 
 ### 4. `shelflife_v2.db`
-
 SQLite database of our movie and wikipedia pageview data. Requires SQLite DB Browser to access.
 ---
 
