@@ -109,6 +109,10 @@ For every movie in the `movies` table, fetches daily Wikipedia pageviews coverin
 
 One-off helper for movies that failed during the main collection run. Edit the three variables at the top of the file (`MOVIE_ID`, `WIKI_TITLE`, `RELEASE_DATE`) and run it to insert a single movie's pageviews manually.
 
+
+### 4. `shelflife_v2.db`
+
+SQLite database of our movie and wikipedia pageview data. Requires SQLite DB Browser to access.
 ---
 
 ## Analytical Methods
